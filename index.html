@@ -354,9 +354,15 @@
                 }
             });
 
-            // Keep player in bounds
-            if (player.x < 0) player.x = 0;
-            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            // Keep player in bounds (prevent wrapping)
+            if (player.x < 0) {
+                player.x = 0;
+                player.velocityX = 0;
+            }
+            if (player.x + player.width > canvas.width) {
+                player.x = canvas.width - player.width;
+                player.velocityX = 0;
+            }
 
             // Fall off bottom = lose life
             if (player.y > canvas.height) {
