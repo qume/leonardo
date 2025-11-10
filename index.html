@@ -143,19 +143,119 @@
                 opacity: 0;
             }
         }
+        .main-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 2000;
+        }
+        .main-menu.hidden {
+            display: none;
+        }
+        .main-menu h1 {
+            font-size: 96px;
+            color: #fff;
+            margin: 20px;
+            text-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .main-menu .subtitle {
+            font-size: 28px;
+            color: #ecf0f1;
+            margin: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        .main-menu .game-icon {
+            font-size: 100px;
+            margin: 30px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        .main-menu .features {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+        }
+        .main-menu .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-size: 18px;
+            backdrop-filter: blur(10px);
+        }
+        .main-menu button {
+            font-size: 32px;
+            padding: 20px 60px;
+            margin-top: 20px;
+            background: #f39c12;
+            border: none;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .main-menu button:hover {
+            background: #e67e22;
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+        .game-container {
+            display: none;
+        }
+        .game-container.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <strong>Controls:</strong> Arrow Keys or WASD to move | Space or W/↑ to jump | Avoid the sawblades! 🪚
+    <!-- Main Menu -->
+    <div id="mainMenu" class="main-menu">
+        <div class="game-icon">🎮</div>
+        <h1>PLATFORMER ADVENTURE</h1>
+        <div class="subtitle">Can you survive all 5 levels?</div>
+        <div class="features">
+            <div class="feature">⭐ 5 Challenging Levels</div>
+            <div class="feature">🪚 Deadly Sawblades</div>
+            <div class="feature">💰 Collect Coins</div>
+            <div class="feature">❤️ 3 Lives</div>
+        </div>
+        <button onclick="startGame()">START GAME</button>
     </div>
-    <div class="game-info">
-        <div class="level">Level: <span id="level">1</span></div>
-        <div class="score">Score: <span id="score">0</span></div>
-        <div class="lives">Lives: <span id="lives">3</span></div>
+
+    <!-- Game Container -->
+    <div id="gameContainer" class="game-container">
+        <div class="controls">
+            <strong>Controls:</strong> Arrow Keys or WASD to move | Space or W/↑ to jump | Avoid the sawblades! 🪚
+        </div>
+        <div class="game-info">
+            <div class="level">Level: <span id="level">1</span></div>
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="lives">Lives: <span id="lives">3</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>
+            <button onclick="resetGame()">Restart Level</button>
+            <button onclick="returnToMenu()">Main Menu</button>
+        </div>
     </div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <button onclick="resetGame()">Restart Game</button>
 
     <!-- Victory Cutscene -->
     <div id="cutscene" class="cutscene">
@@ -176,6 +276,7 @@
         let lives = 3;
         let totalLevels = 5;
         let showingCutscene = false;
+        let gameStarted = false;
 
         // Player
         const player = {
@@ -531,11 +632,11 @@
             }
         }
 
-        // Close cutscene and restart game
+        // Close cutscene and return to menu
         function closeCutscene() {
             document.getElementById('cutscene').classList.remove('active');
             showingCutscene = false;
-            resetGame();
+            returnToMenu();
         }
 
         // Lose a life
@@ -545,7 +646,7 @@
 
             if (lives <= 0) {
                 alert('Game Over! 💀 Final Score: ' + score);
-                resetGame();
+                returnToMenu();
             } else {
                 // Respawn at start position
                 const level = levels[currentLevel - 1];
@@ -656,6 +757,14 @@
             ctx.fillText('Avoid sawblades! Reach the star!', 20, 30);
         }
 
+        // Start game from main menu
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.add('active');
+            resetGame();
+        }
+
         function resetGame() {
             currentLevel = 1;
             score = 0;
@@ -666,20 +775,28 @@
             loadLevel(currentLevel);
         }
 
+        // Return to main menu
+        function returnToMenu() {
+            gameStarted = false;
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.remove('active');
+            document.getElementById('cutscene').classList.remove('active');
+            showingCutscene = false;
+        }
+
         // Game loop
         function gameLoop() {
-            if (!showingCutscene) {
+            if (gameStarted && !showingCutscene) {
                 updatePlayer();
                 updateSawblades();
                 updateCoins();
                 checkGoal();
+                draw();
             }
-            draw();
             requestAnimationFrame(gameLoop);
         }
 
-        // Initialize and start game
-        loadLevel(currentLevel);
+        // Initialize game loop (but don't start the game)
         gameLoop();
     </script>
 </body>
