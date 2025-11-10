@@ -223,6 +223,73 @@
             flex-direction: column;
             align-items: center;
         }
+        .level-editor {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .level-editor.active {
+            display: flex;
+        }
+        .editor-toolbar {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .editor-tool {
+            padding: 10px 20px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .editor-tool:hover {
+            background: #7f8c8d;
+        }
+        .editor-tool.active {
+            background: #3498db;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+        .editor-canvas {
+            border: 3px solid #34495e;
+            background: #87CEEB;
+            cursor: crosshair;
+        }
+        .editor-info {
+            background: #34495e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            color: white;
+            font-size: 14px;
+        }
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .property-panel {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .property-panel.active {
+            display: block;
+        }
+        .property-panel input {
+            margin: 5px;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
@@ -238,6 +305,7 @@
             <div class="feature">❤️ 3 Lives</div>
         </div>
         <button onclick="startGame()">START GAME</button>
+        <button onclick="openLevelEditor()">LEVEL EDITOR 🛠️</button>
     </div>
 
     <!-- Game Container -->
@@ -258,6 +326,50 @@
         </div>
     </div>
 
+    <!-- Level Editor -->
+    <div id="levelEditor" class="level-editor">
+        <h2 style="color: white; margin-bottom: 10px;">🛠️ LEVEL EDITOR</h2>
+
+        <div class="editor-toolbar">
+            <button class="editor-tool active" onclick="selectTool('platform')" id="tool-platform">📦 Platform</button>
+            <button class="editor-tool" onclick="selectTool('sawblade')" id="tool-sawblade">🪚 Sawblade</button>
+            <button class="editor-tool" onclick="selectTool('coin')" id="tool-coin">💰 Coin</button>
+            <button class="editor-tool" onclick="selectTool('goal')" id="tool-goal">⭐ Goal</button>
+            <button class="editor-tool" onclick="selectTool('start')" id="tool-start">🚀 Start Position</button>
+            <button class="editor-tool" onclick="selectTool('delete')" id="tool-delete">🗑️ Delete</button>
+        </div>
+
+        <div class="property-panel" id="propertyPanel" style="color: white;">
+            <div id="platformProps">
+                <label>Width: <input type="number" id="platformWidth" value="100" min="20" max="800"></label>
+                <label>Height: <input type="number" id="platformHeight" value="20" min="10" max="200"></label>
+            </div>
+            <div id="sawbladeProps" style="display: none;">
+                <label>Speed: <input type="number" id="sawbladeSpeed" value="2" min="1" max="5" step="0.5"></label>
+                <label>Movement:
+                    <select id="sawbladeAxis">
+                        <option value="x">Horizontal</option>
+                        <option value="y">Vertical</option>
+                    </select>
+                </label>
+                <label>Range: <input type="number" id="sawbladeRange" value="100" min="50" max="400"></label>
+            </div>
+        </div>
+
+        <canvas id="editorCanvas" class="editor-canvas" width="800" height="600"></canvas>
+
+        <div class="editor-info">
+            <span id="editorInfo">Click to place objects | Right-click to delete | Grid: 20px</span>
+        </div>
+
+        <div class="editor-actions">
+            <button onclick="testLevel()">▶️ Test Level</button>
+            <button onclick="clearEditor()">🗑️ Clear All</button>
+            <button onclick="exportLevel()">💾 Export JSON</button>
+            <button onclick="returnToMenu()">🏠 Main Menu</button>
+        </div>
+    </div>
+
     <!-- Victory Cutscene -->
     <div id="cutscene" class="cutscene">
         <div class="trophy">🏆</div>
@@ -275,7 +387,7 @@
         let score = 0;
         let currentLevel = 1;
         let lives = 3;
-        let totalLevels = 5;
+        let totalLevels = 15;
         let showingCutscene = false;
         let gameStarted = false;
 
@@ -977,8 +1089,10 @@
         // Return to main menu
         function returnToMenu() {
             gameStarted = false;
+            editorMode = false;
             document.getElementById('mainMenu').classList.remove('hidden');
             document.getElementById('gameContainer').classList.remove('active');
+            document.getElementById('levelEditor').classList.remove('active');
             document.getElementById('cutscene').classList.remove('active');
             showingCutscene = false;
         }
@@ -993,6 +1107,294 @@
                 draw();
             }
             requestAnimationFrame(gameLoop);
+        }
+
+        // ===== LEVEL EDITOR =====
+        let editorMode = false;
+        let selectedTool = 'platform';
+        let editorObjects = {
+            platforms: [],
+            sawblades: [],
+            coins: [],
+            goal: null,
+            startPos: { x: 50, y: 500 }
+        };
+
+        const editorCanvas = document.getElementById('editorCanvas');
+        const editorCtx = editorCanvas ? editorCanvas.getContext('2d') : null;
+        const gridSize = 20;
+
+        function openLevelEditor() {
+            editorMode = true;
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('levelEditor').classList.add('active');
+            document.getElementById('propertyPanel').classList.add('active');
+            drawEditor();
+        }
+
+        function selectTool(tool) {
+            selectedTool = tool;
+            // Update active button
+            document.querySelectorAll('.editor-tool').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tool-' + tool).classList.add('active');
+
+            // Show/hide property panels
+            document.getElementById('platformProps').style.display = tool === 'platform' ? 'block' : 'none';
+            document.getElementById('sawbladeProps').style.display = tool === 'sawblade' ? 'block' : 'none';
+        }
+
+        // Editor canvas click
+        if (editorCanvas) {
+            editorCanvas.addEventListener('click', (e) => {
+                if (!editorMode) return;
+
+                const rect = editorCanvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / gridSize) * gridSize;
+                const y = Math.floor((e.clientY - rect.top) / gridSize) * gridSize;
+
+                placeObject(x, y);
+            });
+
+            editorCanvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (!editorMode) return;
+
+                const rect = editorCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                deleteObjectAt(x, y);
+            });
+        }
+
+        function placeObject(x, y) {
+            switch(selectedTool) {
+                case 'platform':
+                    const width = parseInt(document.getElementById('platformWidth').value);
+                    const height = parseInt(document.getElementById('platformHeight').value);
+                    editorObjects.platforms.push({
+                        x, y, width, height,
+                        color: '#2ecc71'
+                    });
+                    break;
+
+                case 'sawblade':
+                    const speed = parseFloat(document.getElementById('sawbladeSpeed').value);
+                    const axis = document.getElementById('sawbladeAxis').value;
+                    const range = parseInt(document.getElementById('sawbladeRange').value);
+
+                    editorObjects.sawblades.push({
+                        x: x + 25, y: y + 25,
+                        radius: 25,
+                        speed: speed,
+                        direction: 1,
+                        minX: axis === 'x' ? x : x + 25,
+                        maxX: axis === 'x' ? x + range : x + 25,
+                        minY: axis === 'y' ? y : y + 25,
+                        maxY: axis === 'y' ? y + range : y + 25,
+                        axis: axis
+                    });
+                    break;
+
+                case 'coin':
+                    editorObjects.coins.push({
+                        x, y,
+                        width: 20,
+                        height: 20,
+                        collected: false
+                    });
+                    break;
+
+                case 'goal':
+                    editorObjects.goal = { x, y, width: 40, height: 40 };
+                    break;
+
+                case 'start':
+                    editorObjects.startPos = { x, y };
+                    break;
+            }
+
+            drawEditor();
+        }
+
+        function deleteObjectAt(x, y) {
+            // Delete platform
+            editorObjects.platforms = editorObjects.platforms.filter(p => {
+                return !(x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height);
+            });
+
+            // Delete sawblade
+            editorObjects.sawblades = editorObjects.sawblades.filter(s => {
+                const dist = Math.sqrt((x - s.x) ** 2 + (y - s.y) ** 2);
+                return dist > s.radius;
+            });
+
+            // Delete coin
+            editorObjects.coins = editorObjects.coins.filter(c => {
+                return !(x >= c.x && x <= c.x + c.width && y >= c.y && y <= c.y + c.height);
+            });
+
+            // Delete goal
+            if (editorObjects.goal && x >= editorObjects.goal.x && x <= editorObjects.goal.x + editorObjects.goal.width &&
+                y >= editorObjects.goal.y && y <= editorObjects.goal.y + editorObjects.goal.height) {
+                editorObjects.goal = null;
+            }
+
+            drawEditor();
+        }
+
+        function drawEditor() {
+            if (!editorCtx) return;
+
+            // Clear
+            editorCtx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+
+            // Draw grid
+            editorCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            editorCtx.lineWidth = 1;
+            for (let x = 0; x < editorCanvas.width; x += gridSize) {
+                editorCtx.beginPath();
+                editorCtx.moveTo(x, 0);
+                editorCtx.lineTo(x, editorCanvas.height);
+                editorCtx.stroke();
+            }
+            for (let y = 0; y < editorCanvas.height; y += gridSize) {
+                editorCtx.beginPath();
+                editorCtx.moveTo(0, y);
+                editorCtx.lineTo(editorCanvas.width, y);
+                editorCtx.stroke();
+            }
+
+            // Draw platforms
+            editorObjects.platforms.forEach(p => {
+                editorCtx.fillStyle = p.color;
+                editorCtx.fillRect(p.x, p.y, p.width, p.height);
+                editorCtx.strokeStyle = '#229954';
+                editorCtx.lineWidth = 2;
+                editorCtx.strokeRect(p.x, p.y, p.width, p.height);
+            });
+
+            // Draw sawblades
+            editorObjects.sawblades.forEach(s => {
+                editorCtx.fillStyle = '#95a5a6';
+                editorCtx.beginPath();
+                editorCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                editorCtx.fill();
+
+                // Draw range indicator
+                editorCtx.strokeStyle = 'rgba(231, 76, 60, 0.3)';
+                editorCtx.lineWidth = 2;
+                editorCtx.setLineDash([5, 5]);
+                if (s.axis === 'y') {
+                    editorCtx.beginPath();
+                    editorCtx.moveTo(s.x, s.minY);
+                    editorCtx.lineTo(s.x, s.maxY);
+                    editorCtx.stroke();
+                } else {
+                    editorCtx.beginPath();
+                    editorCtx.moveTo(s.minX, s.y);
+                    editorCtx.lineTo(s.maxX, s.y);
+                    editorCtx.stroke();
+                }
+                editorCtx.setLineDash([]);
+            });
+
+            // Draw coins
+            editorObjects.coins.forEach(c => {
+                editorCtx.fillStyle = '#f1c40f';
+                editorCtx.beginPath();
+                editorCtx.arc(c.x + c.width/2, c.y + c.height/2, c.width/2, 0, Math.PI * 2);
+                editorCtx.fill();
+            });
+
+            // Draw goal
+            if (editorObjects.goal) {
+                editorCtx.fillStyle = '#f39c12';
+                editorCtx.fillRect(editorObjects.goal.x, editorObjects.goal.y, editorObjects.goal.width, editorObjects.goal.height);
+                editorCtx.font = 'bold 30px Arial';
+                editorCtx.fillText('⭐', editorObjects.goal.x + 5, editorObjects.goal.y + 32);
+            }
+
+            // Draw start position
+            editorCtx.fillStyle = '#e74c3c';
+            editorCtx.fillRect(editorObjects.startPos.x, editorObjects.startPos.y, 30, 30);
+            editorCtx.font = 'bold 20px Arial';
+            editorCtx.fillText('🚀', editorObjects.startPos.x + 5, editorObjects.startPos.y + 23);
+
+            // Update info
+            const objCount = editorObjects.platforms.length + editorObjects.sawblades.length + editorObjects.coins.length;
+            document.getElementById('editorInfo').textContent =
+                `Objects: ${objCount} | Platforms: ${editorObjects.platforms.length} | Sawblades: ${editorObjects.sawblades.length} | Coins: ${editorObjects.coins.length}`;
+        }
+
+        function testLevel() {
+            if (!editorObjects.goal) {
+                alert('⚠️ You must place a goal (⭐) before testing!');
+                return;
+            }
+
+            // Convert editor objects to game level
+            platforms = JSON.parse(JSON.stringify(editorObjects.platforms));
+            sawblades = JSON.parse(JSON.stringify(editorObjects.sawblades));
+            coins = JSON.parse(JSON.stringify(editorObjects.coins));
+            goal = JSON.parse(JSON.stringify(editorObjects.goal));
+
+            // Reset player to start position
+            player.x = editorObjects.startPos.x;
+            player.y = editorObjects.startPos.y;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.onGround = false;
+            player.onWall = false;
+            player.trail = [];
+
+            // Reset game state
+            lives = 3;
+            score = 0;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = 'TEST';
+
+            // Switch to game mode
+            editorMode = false;
+            gameStarted = true;
+            document.getElementById('levelEditor').classList.remove('active');
+            document.getElementById('gameContainer').classList.add('active');
+        }
+
+        function clearEditor() {
+            if (confirm('Are you sure you want to clear everything?')) {
+                editorObjects = {
+                    platforms: [],
+                    sawblades: [],
+                    coins: [],
+                    goal: null,
+                    startPos: { x: 50, y: 500 }
+                };
+                drawEditor();
+            }
+        }
+
+        function exportLevel() {
+            const levelData = {
+                platforms: editorObjects.platforms,
+                coins: editorObjects.coins,
+                sawblades: editorObjects.sawblades,
+                goal: editorObjects.goal,
+                startPos: editorObjects.startPos
+            };
+
+            const json = JSON.stringify(levelData, null, 2);
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(json).then(() => {
+                alert('✅ Level JSON copied to clipboard!\n\nYou can paste this into the levels array in the code.');
+            }).catch(() => {
+                // Fallback: show in alert
+                prompt('Copy this JSON:', json);
+            });
+
+            console.log('Level Export:', json);
         }
 
         // Initialize game loop (but don't start the game)
