@@ -244,6 +244,7 @@
     <div id="gameContainer" class="game-container">
         <div class="controls">
             <strong>Controls:</strong> Arrow Keys/WASD/Gamepad to move | Space/W/↑/A Button to jump | Wall Jump! 🧗 | Avoid sawblades! 🪚
+            <span id="gamepadStatus" style="color: #95a5a6; margin-left: 10px;"></span>
         </div>
         <div class="game-info">
             <div class="level">Level: <span id="level">1</span></div>
@@ -459,33 +460,77 @@
         // Gamepad support
         window.addEventListener('gamepadconnected', (e) => {
             gamepadIndex = e.gamepad.index;
-            console.log('Gamepad connected:', e.gamepad.id);
+            console.log('🎮 Gamepad connected:', e.gamepad.id);
+            updateGamepadStatus(true, e.gamepad.id);
         });
 
         window.addEventListener('gamepaddisconnected', (e) => {
             if (gamepadIndex === e.gamepad.index) {
                 gamepadIndex = null;
+                console.log('🎮 Gamepad disconnected');
+                updateGamepadStatus(false);
             }
         });
 
-        // Get gamepad input
-        function getGamepadInput() {
-            if (gamepadIndex === null) return { x: 0, y: 0, jump: false };
+        // Update gamepad status display
+        function updateGamepadStatus(connected, name = '') {
+            const statusEl = document.getElementById('gamepadStatus');
+            if (statusEl) {
+                if (connected) {
+                    statusEl.textContent = '🎮 Controller Connected';
+                    statusEl.style.color = '#2ecc71';
+                } else {
+                    statusEl.textContent = '';
+                }
+            }
+        }
 
-            const gamepad = navigator.getGamepads()[gamepadIndex];
-            if (!gamepad) return { x: 0, y: 0, jump: false };
+        // Get gamepad input - with automatic detection
+        function getGamepadInput() {
+            // Always poll for gamepads (needed for Chrome/Edge)
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+            // Try to find a connected gamepad
+            let gamepad = null;
+
+            // First try the cached index
+            if (gamepadIndex !== null && gamepads[gamepadIndex]) {
+                gamepad = gamepads[gamepadIndex];
+            } else {
+                // Search for any connected gamepad
+                for (let i = 0; i < gamepads.length; i++) {
+                    if (gamepads[i]) {
+                        gamepad = gamepads[i];
+                        gamepadIndex = i;
+                        console.log('🎮 Gamepad auto-detected:', gamepad.id);
+                        updateGamepadStatus(true, gamepad.id);
+                        break;
+                    }
+                }
+            }
+
+            // No gamepad found
+            if (!gamepad) {
+                return { x: 0, y: 0, jump: false, jumpHeld: false };
+            }
 
             // Left stick (axes[0] = horizontal, axes[1] = vertical)
-            const x = Math.abs(gamepad.axes[0]) > 0.15 ? gamepad.axes[0] : 0;
-            const y = Math.abs(gamepad.axes[1]) > 0.15 ? gamepad.axes[1] : 0;
+            const deadzone = 0.15;
+            const x = Math.abs(gamepad.axes[0]) > deadzone ? gamepad.axes[0] : 0;
+            const y = Math.abs(gamepad.axes[1]) > deadzone ? gamepad.axes[1] : 0;
 
-            // D-pad support
-            const dpadX = (gamepad.buttons[15]?.pressed ? 1 : 0) - (gamepad.buttons[14]?.pressed ? 1 : 0);
+            // D-pad support (buttons 12=up, 13=down, 14=left, 15=right)
+            const dpadLeft = gamepad.buttons[14]?.pressed ? -1 : 0;
+            const dpadRight = gamepad.buttons[15]?.pressed ? 1 : 0;
+            const dpadX = dpadLeft + dpadRight;
 
-            // Jump button (A button = button 0, B button = button 1)
-            const jumpPressed = gamepad.buttons[0]?.pressed || gamepad.buttons[1]?.pressed;
+            // Jump buttons (A=0, B=1, X=2, Y=3, LB=4, RB=5)
+            const jumpPressed = gamepad.buttons[0]?.pressed ||  // A button
+                               gamepad.buttons[1]?.pressed ||  // B button
+                               gamepad.buttons[2]?.pressed ||  // X button
+                               gamepad.buttons[3]?.pressed;    // Y button
 
-            // Track button press/release for jump
+            // Track button press/release for jump (prevent holding)
             const jump = jumpPressed && !gamepadButtonPressed.jump;
             gamepadButtonPressed.jump = jumpPressed;
 
