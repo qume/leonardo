@@ -56,6 +56,93 @@
         button:hover {
             background: #2980b9;
         }
+        .cutscene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            animation: fadeIn 1s ease-in;
+        }
+        .cutscene.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .cutscene h1 {
+            font-size: 72px;
+            color: #f39c12;
+            margin: 20px;
+            animation: slideUp 1s ease-out, bounce 2s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(243, 156, 18, 0.8);
+        }
+        .cutscene .message {
+            font-size: 32px;
+            color: #ecf0f1;
+            margin: 20px;
+            animation: slideUp 1.5s ease-out;
+            text-align: center;
+        }
+        .cutscene .final-score {
+            font-size: 48px;
+            color: #2ecc71;
+            margin: 30px;
+            animation: slideUp 2s ease-out;
+            text-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+        }
+        .cutscene .trophy {
+            font-size: 120px;
+            margin: 20px;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+        }
+        .cutscene button {
+            font-size: 24px;
+            padding: 15px 40px;
+            margin-top: 30px;
+            animation: slideUp 2.5s ease-out;
+        }
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            animation: rise 3s ease-out forwards;
+        }
+        @keyframes rise {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -70,6 +157,15 @@
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <button onclick="resetGame()">Restart Game</button>
 
+    <!-- Victory Cutscene -->
+    <div id="cutscene" class="cutscene">
+        <div class="trophy">🏆</div>
+        <h1>VICTORY!</h1>
+        <div class="message">You conquered all 5 levels!</div>
+        <div class="final-score">Final Score: <span id="finalScore">0</span></div>
+        <button onclick="closeCutscene()">Play Again</button>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -79,6 +175,7 @@
         let currentLevel = 1;
         let lives = 3;
         let totalLevels = 5;
+        let showingCutscene = false;
 
         // Player
         const player = {
@@ -393,10 +490,52 @@
                     loadLevel(currentLevel);
                     alert('Level Complete! 🎉 Moving to Level ' + currentLevel);
                 } else {
-                    alert('🎊 YOU WIN! You completed all levels! 🎊\nFinal Score: ' + score);
-                    resetGame();
+                    // Show victory cutscene
+                    showVictoryCutscene();
                 }
             }
+        }
+
+        // Show victory cutscene with particles
+        function showVictoryCutscene() {
+            showingCutscene = true;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('cutscene').classList.add('active');
+
+            // Create particle effects
+            createParticles();
+        }
+
+        // Create particle effects
+        function createParticles() {
+            const particles = ['⭐', '✨', '🎉', '🎊', '💫', '🌟'];
+            const colors = ['#f39c12', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6'];
+
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.textContent = particles[Math.floor(Math.random() * particles.length)];
+                    particle.style.left = Math.random() * window.innerWidth + 'px';
+                    particle.style.bottom = '-50px';
+                    particle.style.fontSize = (20 + Math.random() * 30) + 'px';
+                    particle.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+
+                    document.body.appendChild(particle);
+
+                    setTimeout(() => {
+                        particle.remove();
+                    }, 4000);
+                }, i * 100);
+            }
+        }
+
+        // Close cutscene and restart game
+        function closeCutscene() {
+            document.getElementById('cutscene').classList.remove('active');
+            showingCutscene = false;
+            resetGame();
         }
 
         // Lose a life
@@ -529,10 +668,12 @@
 
         // Game loop
         function gameLoop() {
-            updatePlayer();
-            updateSawblades();
-            updateCoins();
-            checkGoal();
+            if (!showingCutscene) {
+                updatePlayer();
+                updateSawblades();
+                updateCoins();
+                checkGoal();
+            }
             draw();
             requestAnimationFrame(gameLoop);
         }
