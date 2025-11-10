@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Platformer</title>
+    <title>Platformer Adventure</title>
     <style>
         body {
             margin: 0;
@@ -27,10 +27,21 @@
             border-radius: 8px;
             margin-bottom: 10px;
         }
-        .score {
+        .game-info {
+            display: flex;
+            gap: 30px;
             font-size: 24px;
             font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .score {
             color: #f39c12;
+        }
+        .level {
+            color: #3498db;
+        }
+        .lives {
+            color: #e74c3c;
         }
         button {
             background: #3498db;
@@ -49,11 +60,15 @@
 </head>
 <body>
     <div class="controls">
-        <strong>Controls:</strong> Arrow Keys or WASD to move | Space or W/↑ to jump
+        <strong>Controls:</strong> Arrow Keys or WASD to move | Space or W/↑ to jump | Avoid the sawblades! 🪚
     </div>
-    <div class="score">Score: <span id="score">0</span></div>
+    <div class="game-info">
+        <div class="level">Level: <span id="level">1</span></div>
+        <div class="score">Score: <span id="score">0</span></div>
+        <div class="lives">Lives: <span id="lives">3</span></div>
+    </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <button onclick="resetGame()">Reset Game</button>
+    <button onclick="resetGame()">Restart Game</button>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -61,7 +76,9 @@
 
         // Game state
         let score = 0;
-        let gameOver = false;
+        let currentLevel = 1;
+        let lives = 3;
+        let totalLevels = 5;
 
         // Player
         const player = {
@@ -78,49 +95,164 @@
             color: '#e74c3c'
         };
 
-        // Platforms
-        const platforms = [
-            { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' }, // Ground
-            { x: 150, y: 450, width: 120, height: 20, color: '#2ecc71' },
-            { x: 350, y: 380, width: 100, height: 20, color: '#2ecc71' },
-            { x: 520, y: 310, width: 120, height: 20, color: '#2ecc71' },
-            { x: 300, y: 240, width: 100, height: 20, color: '#2ecc71' },
-            { x: 50, y: 180, width: 120, height: 20, color: '#2ecc71' },
-            { x: 650, y: 450, width: 100, height: 20, color: '#2ecc71' },
-            { x: 600, y: 200, width: 150, height: 20, color: '#2ecc71' }
+        // Level definitions
+        const levels = [
+            // Level 1 - Easy intro
+            {
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' },
+                    { x: 150, y: 450, width: 120, height: 20, color: '#2ecc71' },
+                    { x: 350, y: 380, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 520, y: 310, width: 120, height: 20, color: '#2ecc71' },
+                    { x: 650, y: 450, width: 100, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 200, y: 410, width: 20, height: 20, collected: false },
+                    { x: 390, y: 340, width: 20, height: 20, collected: false },
+                    { x: 570, y: 270, width: 20, height: 20, collected: false }
+                ],
+                sawblades: [
+                    { x: 300, y: 520, radius: 25, speed: 2, direction: 1, minX: 250, maxX: 450 }
+                ],
+                goal: { x: 700, y: 400, width: 40, height: 40 },
+                startPos: { x: 50, y: 400 }
+            },
+            // Level 2 - Moving sawblades
+            {
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' },
+                    { x: 100, y: 450, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 300, y: 380, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 500, y: 310, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 350, y: 200, width: 120, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 140, y: 410, width: 20, height: 20, collected: false },
+                    { x: 340, y: 340, width: 20, height: 20, collected: false },
+                    { x: 540, y: 270, width: 20, height: 20, collected: false },
+                    { x: 390, y: 160, width: 20, height: 20, collected: false }
+                ],
+                sawblades: [
+                    { x: 250, y: 520, radius: 25, speed: 2.5, direction: 1, minX: 200, maxX: 400 },
+                    { x: 450, y: 350, radius: 25, speed: 2, direction: 1, minX: 400, maxX: 600 }
+                ],
+                goal: { x: 400, y: 150, width: 40, height: 40 },
+                startPos: { x: 50, y: 400 }
+            },
+            // Level 3 - Vertical sawblades
+            {
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' },
+                    { x: 120, y: 450, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 320, y: 450, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 520, y: 450, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 220, y: 320, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 450, y: 280, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 650, y: 380, width: 120, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 150, y: 410, width: 20, height: 20, collected: false },
+                    { x: 350, y: 410, width: 20, height: 20, collected: false },
+                    { x: 550, y: 410, width: 20, height: 20, collected: false },
+                    { x: 260, y: 280, width: 20, height: 20, collected: false },
+                    { x: 490, y: 240, width: 20, height: 20, collected: false }
+                ],
+                sawblades: [
+                    { x: 260, y: 350, radius: 25, speed: 2, direction: 1, minY: 320, maxY: 520, axis: 'y' },
+                    { x: 420, y: 350, radius: 25, speed: 2.5, direction: 1, minY: 280, maxY: 520, axis: 'y' }
+                ],
+                goal: { x: 700, y: 330, width: 40, height: 40 },
+                startPos: { x: 30, y: 400 }
+            },
+            // Level 4 - Gauntlet
+            {
+                platforms: [
+                    { x: 0, y: 550, width: 150, height: 50, color: '#27ae60' },
+                    { x: 250, y: 550, width: 100, height: 50, color: '#27ae60' },
+                    { x: 450, y: 550, width: 100, height: 50, color: '#27ae60' },
+                    { x: 650, y: 550, width: 150, height: 50, color: '#27ae60' },
+                    { x: 150, y: 420, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 350, y: 380, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 550, y: 340, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 300, y: 250, width: 200, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 180, y: 380, width: 20, height: 20, collected: false },
+                    { x: 380, y: 340, width: 20, height: 20, collected: false },
+                    { x: 580, y: 300, width: 20, height: 20, collected: false },
+                    { x: 390, y: 210, width: 20, height: 20, collected: false }
+                ],
+                sawblades: [
+                    { x: 200, y: 520, radius: 25, speed: 3, direction: 1, minX: 150, maxX: 250 },
+                    { x: 400, y: 520, radius: 25, speed: 3, direction: -1, minX: 350, maxX: 450 },
+                    { x: 600, y: 520, radius: 25, speed: 3, direction: 1, minX: 550, maxX: 650 },
+                    { x: 280, y: 350, radius: 25, speed: 2.5, direction: 1, minY: 250, maxY: 450, axis: 'y' }
+                ],
+                goal: { x: 420, y: 200, width: 40, height: 40 },
+                startPos: { x: 50, y: 400 }
+            },
+            // Level 5 - Final Challenge
+            {
+                platforms: [
+                    { x: 0, y: 550, width: 100, height: 50, color: '#27ae60' },
+                    { x: 700, y: 550, width: 100, height: 50, color: '#27ae60' },
+                    { x: 80, y: 450, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 240, y: 400, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 400, y: 350, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 560, y: 300, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 640, y: 450, width: 80, height: 20, color: '#2ecc71' },
+                    { x: 300, y: 200, width: 150, height: 20, color: '#2ecc71' },
+                    { x: 100, y: 100, width: 100, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 110, y: 410, width: 20, height: 20, collected: false },
+                    { x: 270, y: 360, width: 20, height: 20, collected: false },
+                    { x: 430, y: 310, width: 20, height: 20, collected: false },
+                    { x: 590, y: 260, width: 20, height: 20, collected: false },
+                    { x: 360, y: 160, width: 20, height: 20, collected: false },
+                    { x: 140, y: 60, width: 20, height: 20, collected: false }
+                ],
+                sawblades: [
+                    { x: 150, y: 520, radius: 25, speed: 3.5, direction: 1, minX: 100, maxX: 200 },
+                    { x: 350, y: 520, radius: 25, speed: 3, direction: 1, minX: 300, maxX: 450 },
+                    { x: 550, y: 520, radius: 25, speed: 3.5, direction: -1, minX: 500, maxX: 650 },
+                    { x: 180, y: 370, radius: 25, speed: 2.5, direction: 1, minY: 200, maxY: 450, axis: 'y' },
+                    { x: 500, y: 370, radius: 25, speed: 2.5, direction: 1, minY: 200, maxY: 450, axis: 'y' }
+                ],
+                goal: { x: 130, y: 50, width: 40, height: 40 },
+                startPos: { x: 30, y: 400 }
+            }
         ];
 
-        // Collectibles (coins)
-        const coins = [
-            { x: 200, y: 410, width: 20, height: 20, collected: false },
-            { x: 390, y: 340, width: 20, height: 20, collected: false },
-            { x: 570, y: 270, width: 20, height: 20, collected: false },
-            { x: 340, y: 200, width: 20, height: 20, collected: false },
-            { x: 100, y: 140, width: 20, height: 20, collected: false },
-            { x: 680, y: 160, width: 20, height: 20, collected: false },
-            { x: 700, y: 410, width: 20, height: 20, collected: false }
-        ];
-
-        // Goal
-        const goal = {
-            x: 700,
-            y: 140,
-            width: 40,
-            height: 40,
-            color: '#f39c12'
-        };
+        let platforms = [];
+        let coins = [];
+        let sawblades = [];
+        let goal = {};
 
         // Input handling
         const keys = {};
 
         window.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === ' ') e.preventDefault(); // Prevent space from scrolling
+            if (e.key === ' ') e.preventDefault();
         });
 
         window.addEventListener('keyup', (e) => {
             keys[e.key] = false;
         });
+
+        // Load level
+        function loadLevel(levelNum) {
+            const level = levels[levelNum - 1];
+            platforms = JSON.parse(JSON.stringify(level.platforms));
+            coins = JSON.parse(JSON.stringify(level.coins));
+            sawblades = JSON.parse(JSON.stringify(level.sawblades));
+            goal = JSON.parse(JSON.stringify(level.goal));
+            player.x = level.startPos.x;
+            player.y = level.startPos.y;
+            player.velocityX = 0;
+            player.velocityY = 0;
+        }
 
         // Collision detection
         function checkCollision(rect1, rect2) {
@@ -128,6 +260,46 @@
                    rect1.x + rect1.width > rect2.x &&
                    rect1.y < rect2.y + rect2.height &&
                    rect1.y + rect1.height > rect2.y;
+        }
+
+        // Check circle-rectangle collision (for sawblades)
+        function checkCircleRectCollision(circle, rect) {
+            const distX = Math.abs(circle.x - rect.x - rect.width / 2);
+            const distY = Math.abs(circle.y - rect.y - rect.height / 2);
+
+            if (distX > (rect.width / 2 + circle.radius)) return false;
+            if (distY > (rect.height / 2 + circle.radius)) return false;
+
+            if (distX <= (rect.width / 2)) return true;
+            if (distY <= (rect.height / 2)) return true;
+
+            const dx = distX - rect.width / 2;
+            const dy = distY - rect.height / 2;
+            return (dx * dx + dy * dy <= (circle.radius * circle.radius));
+        }
+
+        // Update sawblades
+        function updateSawblades() {
+            sawblades.forEach(saw => {
+                if (saw.axis === 'y') {
+                    // Vertical movement
+                    saw.y += saw.speed * saw.direction;
+                    if (saw.y >= saw.maxY || saw.y <= saw.minY) {
+                        saw.direction *= -1;
+                    }
+                } else {
+                    // Horizontal movement (default)
+                    saw.x += saw.speed * saw.direction;
+                    if (saw.x >= saw.maxX || saw.x <= saw.minX) {
+                        saw.direction *= -1;
+                    }
+                }
+
+                // Check collision with player
+                if (checkCircleRectCollision(saw, player)) {
+                    loseLife();
+                }
+            });
         }
 
         // Update player
@@ -186,9 +358,9 @@
             if (player.x < 0) player.x = 0;
             if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-            // Fall off bottom = game over
+            // Fall off bottom = lose life
             if (player.y > canvas.height) {
-                resetPlayerPosition();
+                loseLife();
             }
         }
 
@@ -208,8 +380,34 @@
             if (checkCollision(player, goal)) {
                 score += 100;
                 document.getElementById('score').textContent = score;
-                alert('You Win! 🎉 Final Score: ' + score);
+
+                if (currentLevel < totalLevels) {
+                    currentLevel++;
+                    document.getElementById('level').textContent = currentLevel;
+                    loadLevel(currentLevel);
+                    alert('Level Complete! 🎉 Moving to Level ' + currentLevel);
+                } else {
+                    alert('🎊 YOU WIN! You completed all levels! 🎊\nFinal Score: ' + score);
+                    resetGame();
+                }
+            }
+        }
+
+        // Lose a life
+        function loseLife() {
+            lives--;
+            document.getElementById('lives').textContent = lives;
+
+            if (lives <= 0) {
+                alert('Game Over! 💀 Final Score: ' + score);
                 resetGame();
+            } else {
+                // Respawn at start position
+                const level = levels[currentLevel - 1];
+                player.x = level.startPos.x;
+                player.y = level.startPos.y;
+                player.velocityX = 0;
+                player.velocityY = 0;
             }
         }
 
@@ -231,8 +429,6 @@
             platforms.forEach(platform => {
                 ctx.fillStyle = platform.color;
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-
-                // Add some texture
                 ctx.strokeStyle = '#229954';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
@@ -246,8 +442,6 @@
                     ctx.beginPath();
                     ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/2, 0, Math.PI * 2);
                     ctx.fill();
-
-                    // Shine effect
                     ctx.fillStyle = '#fff9e6';
                     ctx.beginPath();
                     ctx.arc(coin.x + coin.width/2 - 3, coin.y + coin.height/2 - 3, 4, 0, Math.PI * 2);
@@ -256,58 +450,89 @@
             });
         }
 
+        function drawSawblades() {
+            sawblades.forEach(saw => {
+                // Draw sawblade body
+                ctx.fillStyle = '#95a5a6';
+                ctx.beginPath();
+                ctx.arc(saw.x, saw.y, saw.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw teeth
+                const teeth = 12;
+                ctx.fillStyle = '#7f8c8d';
+                for (let i = 0; i < teeth; i++) {
+                    const angle = (Math.PI * 2 / teeth) * i + Date.now() / 200;
+                    const x1 = saw.x + Math.cos(angle) * saw.radius * 0.7;
+                    const y1 = saw.y + Math.sin(angle) * saw.radius * 0.7;
+                    const x2 = saw.x + Math.cos(angle) * saw.radius * 1.2;
+                    const y2 = saw.y + Math.sin(angle) * saw.radius * 1.2;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.lineTo(
+                        saw.x + Math.cos(angle + 0.2) * saw.radius,
+                        saw.y + Math.sin(angle + 0.2) * saw.radius
+                    );
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Center
+                ctx.fillStyle = '#34495e';
+                ctx.beginPath();
+                ctx.arc(saw.x, saw.y, saw.radius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
         function drawGoal() {
             ctx.fillStyle = goal.color;
             ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
-
-            // Star shape
             ctx.fillStyle = '#f39c12';
             ctx.font = 'bold 30px Arial';
             ctx.fillText('⭐', goal.x + 5, goal.y + 32);
         }
 
         function draw() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw everything
             drawPlatforms();
             drawCoins();
+            drawSawblades();
             drawGoal();
             drawPlayer();
 
-            // Instructions
+            // Level indicator
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(10, 10, 280, 30);
+            ctx.fillRect(10, 10, 220, 30);
             ctx.fillStyle = 'white';
             ctx.font = '14px Arial';
-            ctx.fillText('Collect coins and reach the star!', 20, 30);
-        }
-
-        function resetPlayerPosition() {
-            player.x = 50;
-            player.y = 400;
-            player.velocityX = 0;
-            player.velocityY = 0;
+            ctx.fillText('Avoid sawblades! Reach the star!', 20, 30);
         }
 
         function resetGame() {
-            resetPlayerPosition();
+            currentLevel = 1;
             score = 0;
+            lives = 3;
+            document.getElementById('level').textContent = currentLevel;
             document.getElementById('score').textContent = score;
-            coins.forEach(coin => coin.collected = false);
+            document.getElementById('lives').textContent = lives;
+            loadLevel(currentLevel);
         }
 
         // Game loop
         function gameLoop() {
             updatePlayer();
+            updateSawblades();
             updateCoins();
             checkGoal();
             draw();
             requestAnimationFrame(gameLoop);
         }
 
-        // Start game
+        // Initialize and start game
+        loadLevel(currentLevel);
         gameLoop();
     </script>
 </body>
