@@ -444,20 +444,24 @@
                 startPos: { x: 50, y: 500 }
             },
 
-            // Level 2 - "Wall Climb" - Introduce wall jumping
+            // Level 2 - "Wall Climb" - Introduce wall jumping (easier)
             {
                 platforms: [
                     { x: 0, y: 550, width: 120, height: 50, color: '#27ae60' },
-                    { x: 680, y: 100, width: 120, height: 500, color: '#2ecc71' }, // Right wall
+                    { x: 180, y: 450, width: 80, height: 20, color: '#2ecc71' }, // Step 1
+                    { x: 320, y: 360, width: 80, height: 20, color: '#2ecc71' }, // Step 2
+                    { x: 480, y: 270, width: 80, height: 20, color: '#2ecc71' }, // Step 3
+                    { x: 640, y: 180, width: 80, height: 20, color: '#2ecc71' }, // Step 4
+                    { x: 720, y: 100, width: 80, height: 500, color: '#27ae60' } // Right platform
                 ],
                 coins: [
-                    { x: 50, y: 400, width: 20, height: 20, collected: false },
-                    { x: 50, y: 250, width: 20, height: 20, collected: false },
+                    { x: 200, y: 415, width: 20, height: 20, collected: false },
+                    { x: 500, y: 235, width: 20, height: 20, collected: false },
                 ],
                 sawblades: [
-                    { x: 350, y: 350, radius: 25, speed: 2, direction: 1, minY: 250, maxY: 500, axis: 'y' }
+                    { x: 400, y: 500, radius: 25, speed: 0, direction: 1, minY: 500, maxY: 500, axis: 'y' } // Static sawblade
                 ],
-                goal: { x: 720, y: 50, width: 40, height: 40 },
+                goal: { x: 740, y: 50, width: 40, height: 40 },
                 startPos: { x: 30, y: 500 }
             },
 
