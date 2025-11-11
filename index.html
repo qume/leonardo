@@ -311,7 +311,7 @@
     <!-- Game Container -->
     <div id="gameContainer" class="game-container">
         <div class="controls">
-            <strong>Controls:</strong> Arrow Keys/WASD/Gamepad to move | Space/W/↑/A Button to jump | Wall Jump! 🧗 | Avoid sawblades! 🪚
+            <strong>Controls:</strong> Move: WASD/Arrows/Gamepad | Jump: Hold=High, Tap=Low | Wall Jump! 🧗 | Super Meat Boy style! 🍖
             <span id="gamepadStatus" style="color: #95a5a6; margin-left: 10px;"></span>
         </div>
         <div class="game-info">
@@ -395,26 +395,29 @@
         const player = {
             x: 50,
             y: 400,
-            width: 30,
-            height: 30,
+            width: 28,
+            height: 28,
             velocityX: 0,
             velocityY: 0,
-            speed: 7, // Faster movement
-            maxSpeed: 7,
-            acceleration: 1,
-            friction: 0.8,
-            airControl: 0.6,
-            jumpPower: 15, // Higher jumps
-            wallJumpPower: 14,
-            wallSlideSpeed: 2,
-            gravity: 0.6,
-            maxFallSpeed: 15,
+            speed: 8.5, // Super Meat Boy fast!
+            maxSpeed: 8.5,
+            acceleration: 1.5, // Instant response
+            friction: 0.85,
+            airControl: 0.75, // Better air control
+            jumpPower: 16, // Higher jumps
+            minJumpPower: 8, // Variable jump
+            wallJumpPower: 15,
+            wallSlideSpeed: 1.5, // Slower slide for better control
+            gravity: 0.65,
+            maxFallSpeed: 16,
             onGround: false,
             onWall: false,
             wallDirection: 0,
             canWallJump: false,
-            color: '#e74c3c',
-            trail: [] // For visual trail effect
+            jumpPressed: false,
+            color: '#8B0000', // Dark red meat color
+            trail: [], // For visual trail effect
+            deathParticles: []
         };
 
         // Gamepad state
@@ -744,21 +747,31 @@
             // Clamp horizontal velocity
             player.velocityX = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.velocityX));
 
-            // Jump (keyboard + gamepad)
+            // Jump (keyboard + gamepad) - Super Meat Boy variable height
             const jumpPressed = (keys['ArrowUp'] || keys['w'] || keys['W'] || keys[' ']) || gamepad.jump;
+            const jumpHeld = (keys['ArrowUp'] || keys['w'] || keys['W'] || keys[' ']) || gamepad.jumpHeld;
 
-            if (jumpPressed) {
+            // Jump initiation
+            if (jumpPressed && !player.jumpPressed) {
                 if (player.onGround) {
                     player.velocityY = -player.jumpPower;
                     player.onGround = false;
                 } else if (player.canWallJump && player.onWall) {
                     // Wall jump!
                     player.velocityY = -player.wallJumpPower;
-                    player.velocityX = player.wallDirection * player.speed * 1.2; // Boost away from wall
+                    player.velocityX = player.wallDirection * player.speed * 1.3; // Strong boost away
                     player.onWall = false;
                     player.canWallJump = false;
                 }
             }
+
+            // Variable jump height - release early for lower jump
+            if (!jumpHeld && player.velocityY < 0) {
+                // Cut jump short if button released while going up
+                player.velocityY *= 0.5;
+            }
+
+            player.jumpPressed = jumpPressed;
 
             // Apply gravity
             player.velocityY += player.gravity;
@@ -923,6 +936,9 @@
         // Lose a life
         // Instant respawn (Super Meat Boy style)
         function respawnPlayer() {
+            // Create death particles (Super Meat Boy style!)
+            createDeathParticles(player.x + player.width/2, player.y + player.height/2);
+
             lives--;
             document.getElementById('lives').textContent = lives;
 
@@ -942,7 +958,49 @@
                 player.onGround = false;
                 player.onWall = false;
                 player.trail = [];
+                player.jumpPressed = false;
             }
+        }
+
+        // Create death particles (meat chunks!)
+        function createDeathParticles(x, y) {
+            const particleCount = 15;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 / particleCount) * i;
+                const speed = 3 + Math.random() * 4;
+                player.deathParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2, // Slight upward bias
+                    life: 1.0,
+                    size: 3 + Math.random() * 4
+                });
+            }
+        }
+
+        // Update death particles
+        function updateDeathParticles() {
+            player.deathParticles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // Gravity on particles
+                p.life -= 0.02;
+
+                if (p.life <= 0) {
+                    player.deathParticles.splice(index, 1);
+                }
+            });
+        }
+
+        // Draw death particles
+        function drawDeathParticles() {
+            player.deathParticles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = '#8B0000'; // Dark red meat
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+            });
+            ctx.globalAlpha = 1;
         }
 
         // Called when hitting sawblade
@@ -955,31 +1013,42 @@
             // Draw trail effect (Super Meat Boy style)
             player.trail.forEach((t, i) => {
                 if (t.alpha > 0) {
-                    ctx.globalAlpha = t.alpha * 0.5;
+                    ctx.globalAlpha = t.alpha * 0.6;
                     ctx.fillStyle = player.color;
                     ctx.fillRect(t.x, t.y, player.width, player.height);
                 }
             });
             ctx.globalAlpha = 1;
 
-            // Draw player
-            ctx.fillStyle = player.color;
+            // Draw player (Meat Boy!)
+            ctx.fillStyle = player.color; // Dark red
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Wall slide indicator
+            // Add shading for 3D effect
+            ctx.fillStyle = '#A52A2A'; // Lighter red highlight
+            ctx.fillRect(player.x + 2, player.y + 2, player.width - 4, 8);
+
+            // Wall slide indicator (friction sparks!)
             if (player.onWall) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fillStyle = 'rgba(255, 200, 100, 0.8)';
                 const sparkX = player.wallDirection < 0 ? player.x + player.width : player.x;
-                ctx.fillRect(sparkX - 2, player.y + player.height - 10, 4, 10);
+                for (let i = 0; i < 3; i++) {
+                    const offset = Math.random() * 5;
+                    ctx.fillRect(sparkX - 3 + offset, player.y + player.height - 15 + i * 5, 6, 3);
+                }
             }
 
-            // Eyes
+            // Eyes (bigger, more expressive)
             ctx.fillStyle = 'white';
-            ctx.fillRect(player.x + 8, player.y + 8, 6, 6);
-            ctx.fillRect(player.x + 16, player.y + 8, 6, 6);
+            ctx.fillRect(player.x + 6, player.y + 8, 8, 8);
+            ctx.fillRect(player.x + 14, player.y + 8, 8, 8);
             ctx.fillStyle = 'black';
-            ctx.fillRect(player.x + 10, player.y + 10, 3, 3);
-            ctx.fillRect(player.x + 18, player.y + 10, 3, 3);
+            ctx.fillRect(player.x + 9, player.y + 11, 4, 4);
+            ctx.fillRect(player.x + 17, player.y + 11, 4, 4);
+
+            // Mouth (determined expression)
+            ctx.fillStyle = 'black';
+            ctx.fillRect(player.x + 8, player.y + 20, 12, 2);
         }
 
         function drawPlatforms() {
@@ -1057,15 +1126,16 @@
             drawPlatforms();
             drawCoins();
             drawSawblades();
+            drawDeathParticles(); // Draw meat chunks!
             drawGoal();
             drawPlayer();
 
             // Level indicator
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(10, 10, 220, 30);
+            ctx.fillRect(10, 10, 280, 30);
             ctx.fillStyle = 'white';
             ctx.font = '14px Arial';
-            ctx.fillText('Wall Jump! Avoid sawblades! Reach the star!', 20, 30);
+            ctx.fillText('Hold jump for high, tap for low! Wall jump!', 20, 30);
         }
 
         // Start game from main menu
@@ -1103,8 +1173,12 @@
                 updatePlayer();
                 updateSawblades();
                 updateCoins();
+                updateDeathParticles(); // Always update death particles
                 checkGoal();
                 draw();
+            } else if (gameStarted) {
+                // Update particles even during cutscene
+                updateDeathParticles();
             }
             requestAnimationFrame(gameLoop);
         }
