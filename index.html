@@ -1720,12 +1720,14 @@
             player.onGround = false;
             player.onWall = false;
             player.trail = [];
+            player.deathParticles = [];
 
-            // Reset game state
-            lives = 3;
-            score = 0;
-            document.getElementById('lives').textContent = lives;
-            document.getElementById('score').textContent = score;
+            // Reset game state (Super Meat Boy style!)
+            deathCount = 0;
+            levelStartTime = Date.now();
+            bloodSplatters = [];
+            document.getElementById('deaths').textContent = '0';
+            document.getElementById('timer').textContent = '0.00s';
             document.getElementById('level').textContent = 'TEST';
 
             // Switch to game mode
