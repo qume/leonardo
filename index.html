@@ -2154,10 +2154,6 @@
                 if (completedLevels.includes(i)) {
                     cell.classList.add('completed');
                 }
-                // Check if level is locked
-                else if (i > highestUnlocked) {
-                    cell.classList.add('locked');
-                }
                 // Highlight current level
                 if (i === currentLevel) {
                     cell.classList.add('current');
@@ -2175,18 +2171,14 @@
                 if (completedLevels.includes(i)) {
                     status.textContent = '✓';
                     status.style.color = '#2ecc71';
-                } else if (i > highestUnlocked) {
-                    status.textContent = '🔒';
                 } else if (i === currentLevel) {
                     status.textContent = '▶';
                     status.style.color = '#e74c3c';
                 }
                 cell.appendChild(status);
 
-                // Click handler
-                if (i <= highestUnlocked) {
-                    cell.onclick = () => selectLevel(i);
-                }
+                // Click handler - ALL levels are clickable!
+                cell.onclick = () => selectLevel(i);
 
                 grid.appendChild(cell);
             }
@@ -2213,11 +2205,6 @@
             if (!completedLevels.includes(levelNum)) {
                 completedLevels.push(levelNum);
                 localStorage.setItem('firejump_completed', JSON.stringify(completedLevels));
-
-                // Unlock next level
-                if (levelNum < totalLevels) {
-                    highestUnlocked = Math.max(highestUnlocked, levelNum + 1);
-                }
             }
         }
 
