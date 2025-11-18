@@ -2050,11 +2050,34 @@
         }
 
         function drawGoal() {
-            ctx.fillStyle = goal.color;
+            // Draw Bandage Girl (Super Meat Boy style!)
+            // Pink/light colored character
+            ctx.fillStyle = '#FFB6C1'; // Light pink background
             ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
-            ctx.fillStyle = '#f39c12';
-            ctx.font = 'bold 30px Arial';
-            ctx.fillText('⭐', goal.x + 5, goal.y + 32);
+
+            // Border
+            ctx.strokeStyle = '#FF69B4'; // Hot pink border
+            ctx.lineWidth = 3;
+            ctx.strokeRect(goal.x, goal.y, goal.width, goal.height);
+
+            // Bandage Girl body (light pink)
+            ctx.fillStyle = '#FFC0CB';
+            ctx.fillRect(goal.x + 8, goal.y + 12, 24, 20);
+
+            // Bandages (white strips)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(goal.x + 10, goal.y + 18, 20, 3);
+            ctx.fillRect(goal.x + 10, goal.y + 25, 20, 3);
+
+            // Eyes (cute)
+            ctx.fillStyle = 'black';
+            ctx.fillRect(goal.x + 14, goal.y + 8, 4, 4);
+            ctx.fillRect(goal.x + 22, goal.y + 8, 4, 4);
+
+            // Bow/heart on top
+            ctx.fillStyle = '#FF1493'; // Deep pink
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('♥', goal.x + 12, goal.y + 8);
         }
 
         // Draw blood splatters (Super Meat Boy style!)
