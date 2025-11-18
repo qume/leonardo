@@ -224,6 +224,76 @@
             flex-direction: column;
             align-items: center;
         }
+        .level-map {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .level-map.active {
+            display: flex;
+        }
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 70px);
+            gap: 10px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        .level-cell {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #555 0%, #333 100%);
+            border: 3px solid #666;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .level-cell:hover {
+            transform: scale(1.1);
+            border-color: #f39c12;
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.6);
+        }
+        .level-cell.completed {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            border-color: #2ecc71;
+        }
+        .level-cell.locked {
+            background: linear-gradient(135deg, #222 0%, #111 100%);
+            border-color: #444;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .level-cell.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .level-cell.current {
+            border-color: #e74c3c;
+            box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+            animation: pulse-border 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: #e74c3c; }
+            50% { border-color: #c0392b; }
+        }
+        .level-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        .level-status {
+            font-size: 18px;
+            margin-top: 5px;
+        }
         .level-editor {
             display: none;
             flex-direction: column;
@@ -305,8 +375,17 @@
             <div class="feature">⏱️ Speedrun Timer</div>
             <div class="feature">💀 Death Counter</div>
         </div>
-        <button onclick="startGame()">START GAME</button>
+        <button onclick="openLevelMap()">LEVEL MAP 🗺️</button>
         <button onclick="openLevelEditor()">LEVEL EDITOR 🛠️</button>
+    </div>
+
+    <!-- Level Map -->
+    <div id="levelMap" class="level-map">
+        <h2 style="color: white; margin-bottom: 20px;">🗺️ LEVEL SELECT</h2>
+        <div id="levelGrid" class="level-grid"></div>
+        <div style="margin-top: 20px;">
+            <button onclick="returnToMenu()">🏠 Main Menu</button>
+        </div>
     </div>
 
     <!-- Game Container -->
@@ -401,6 +480,10 @@
         let currentTime = 0;
         let totalDeaths = 0;
         let totalTime = 0;
+
+        // Level completion tracking (Super Meat Boy style!)
+        let completedLevels = JSON.parse(localStorage.getItem('firejump_completed') || '[]');
+        let highestUnlocked = Math.max(1, ...completedLevels.map(l => l + 1));
 
         // Player - Super Meat Boy style
         const player = {
@@ -1713,6 +1796,9 @@
                 const levelTime = (Date.now() - levelStartTime) / 1000;
                 totalTime += levelTime;
 
+                // Mark level as complete (Super Meat Boy style!)
+                markLevelComplete(currentLevel);
+
                 if (currentLevel < totalLevels) {
                     const completedLevel = currentLevel;
                     const levelDeaths = deathCount;
@@ -2044,8 +2130,95 @@
             document.getElementById('mainMenu').classList.remove('hidden');
             document.getElementById('gameContainer').classList.remove('active');
             document.getElementById('levelEditor').classList.remove('active');
+            document.getElementById('levelMap').classList.remove('active');
             document.getElementById('cutscene').classList.remove('active');
             showingCutscene = false;
+        }
+
+        // ===== LEVEL MAP (SUPER MEAT BOY STYLE) =====
+        function openLevelMap() {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('levelMap').classList.add('active');
+            createLevelGrid();
+        }
+
+        function createLevelGrid() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= totalLevels; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'level-cell';
+
+                // Check if level is completed
+                if (completedLevels.includes(i)) {
+                    cell.classList.add('completed');
+                }
+                // Check if level is locked
+                else if (i > highestUnlocked) {
+                    cell.classList.add('locked');
+                }
+                // Highlight current level
+                if (i === currentLevel) {
+                    cell.classList.add('current');
+                }
+
+                // Level number
+                const number = document.createElement('div');
+                number.className = 'level-number';
+                number.textContent = i;
+                cell.appendChild(number);
+
+                // Status indicator
+                const status = document.createElement('div');
+                status.className = 'level-status';
+                if (completedLevels.includes(i)) {
+                    status.textContent = '✓';
+                    status.style.color = '#2ecc71';
+                } else if (i > highestUnlocked) {
+                    status.textContent = '🔒';
+                } else if (i === currentLevel) {
+                    status.textContent = '▶';
+                    status.style.color = '#e74c3c';
+                }
+                cell.appendChild(status);
+
+                // Click handler
+                if (i <= highestUnlocked) {
+                    cell.onclick = () => selectLevel(i);
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function selectLevel(levelNum) {
+            currentLevel = levelNum;
+            document.getElementById('levelMap').classList.remove('active');
+            document.getElementById('gameContainer').classList.add('active');
+            gameStarted = true;
+
+            // Reset stats for selected level
+            deathCount = 0;
+            totalDeaths = 0;
+            totalTime = 0;
+            document.getElementById('level').textContent = currentLevel;
+            document.getElementById('timer').textContent = '0.00s';
+            document.getElementById('deaths').textContent = totalDeaths;
+
+            loadLevel(currentLevel);
+        }
+
+        function markLevelComplete(levelNum) {
+            if (!completedLevels.includes(levelNum)) {
+                completedLevels.push(levelNum);
+                localStorage.setItem('firejump_completed', JSON.stringify(completedLevels));
+
+                // Unlock next level
+                if (levelNum < totalLevels) {
+                    highestUnlocked = Math.max(highestUnlocked, levelNum + 1);
+                }
+            }
         }
 
         // Game loop
