@@ -1956,13 +1956,18 @@
             });
             ctx.globalAlpha = 1;
 
-            // Draw player (Meat Boy!)
-            ctx.fillStyle = player.color; // Dark red
+            // Draw Meat Boy (authentic Super Meat Boy style!)
+            // Main body - deep red meat color
+            ctx.fillStyle = '#8B0000'; // Dark red (darker than before)
             ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Add shading for 3D effect
-            ctx.fillStyle = '#A52A2A'; // Lighter red highlight
-            ctx.fillRect(player.x + 2, player.y + 2, player.width - 4, 8);
+            // Lighter meat highlight on top-left
+            ctx.fillStyle = '#CD5C5C'; // Indian red highlight
+            ctx.fillRect(player.x + 2, player.y + 2, player.width - 10, 6);
+
+            // Darker meat shadow on bottom-right
+            ctx.fillStyle = '#5C0000'; // Very dark red
+            ctx.fillRect(player.x + 8, player.y + player.height - 6, player.width - 10, 4);
 
             // Wall slide indicator (friction sparks!)
             if (player.onWall) {
@@ -1974,17 +1979,25 @@
                 }
             }
 
-            // Eyes (bigger, more expressive)
-            ctx.fillStyle = 'white';
-            ctx.fillRect(player.x + 6, player.y + 8, 8, 8);
-            ctx.fillRect(player.x + 14, player.y + 8, 8, 8);
+            // Eyes - simple black dots (Super Meat Boy style)
             ctx.fillStyle = 'black';
-            ctx.fillRect(player.x + 9, player.y + 11, 4, 4);
-            ctx.fillRect(player.x + 17, player.y + 11, 4, 4);
+            ctx.fillRect(player.x + 8, player.y + 8, 5, 6);  // Left eye
+            ctx.fillRect(player.x + 17, player.y + 8, 5, 6); // Right eye
 
-            // Mouth (determined expression)
+            // Smile - Meat Boy's notable smile
             ctx.fillStyle = 'black';
-            ctx.fillRect(player.x + 8, player.y + 20, 12, 2);
+            // Bottom of smile
+            ctx.fillRect(player.x + 7, player.y + 22, 16, 3);
+            // Left corner going up
+            ctx.fillRect(player.x + 7, player.y + 20, 3, 3);
+            // Right corner going up
+            ctx.fillRect(player.x + 20, player.y + 20, 3, 3);
+
+            // Teeth (small white squares in smile)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player.x + 10, player.y + 22, 2, 2);
+            ctx.fillRect(player.x + 14, player.y + 22, 2, 2);
+            ctx.fillRect(player.x + 18, player.y + 22, 2, 2);
         }
 
         function drawPlatforms() {
@@ -2050,34 +2063,62 @@
         }
 
         function drawGoal() {
-            // Draw Bandage Girl (Super Meat Boy style!)
-            // Pink/light colored character
-            ctx.fillStyle = '#FFB6C1'; // Light pink background
+            // Draw Bandage Girl (authentic Super Meat Boy style!)
+            // She's made of pink adhesive bandages!
+
+            // Main body - pink bandage color
+            ctx.fillStyle = '#FFB6D9'; // Bandage pink
             ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
 
-            // Border
-            ctx.strokeStyle = '#FF69B4'; // Hot pink border
-            ctx.lineWidth = 3;
-            ctx.strokeRect(goal.x, goal.y, goal.width, goal.height);
+            // Darker pink shading on bottom
+            ctx.fillStyle = '#FF9EC5';
+            ctx.fillRect(goal.x + 2, goal.y + goal.height - 8, goal.width - 4, 6);
 
-            // Bandage Girl body (light pink)
-            ctx.fillStyle = '#FFC0CB';
-            ctx.fillRect(goal.x + 8, goal.y + 12, 24, 20);
+            // Lighter pink highlight on top
+            ctx.fillStyle = '#FFD4E8';
+            ctx.fillRect(goal.x + 2, goal.y + 8, goal.width - 4, 5);
 
-            // Bandages (white strips)
+            // White bandage crosses (showing she's made of bandages)
             ctx.fillStyle = 'white';
-            ctx.fillRect(goal.x + 10, goal.y + 18, 20, 3);
-            ctx.fillRect(goal.x + 10, goal.y + 25, 20, 3);
+            // Horizontal strips
+            ctx.fillRect(goal.x + 5, goal.y + 14, goal.width - 10, 2);
+            ctx.fillRect(goal.x + 5, goal.y + 20, goal.width - 10, 2);
+            // Vertical strips
+            ctx.fillRect(goal.x + 12, goal.y + 12, 2, 12);
+            ctx.fillRect(goal.x + 26, goal.y + 12, 2, 12);
 
-            // Eyes (cute)
+            // White flower on head (daisy - her signature feature!)
+            ctx.fillStyle = 'white';
+            // Flower petals (5 petals)
+            ctx.fillRect(goal.x + 15, goal.y + 2, 4, 4); // Top petal
+            ctx.fillRect(goal.x + 12, goal.y + 5, 4, 3); // Left petal
+            ctx.fillRect(goal.x + 19, goal.y + 5, 4, 3); // Right petal
+            ctx.fillRect(goal.x + 13, goal.y + 8, 3, 3); // Bottom-left petal
+            ctx.fillRect(goal.x + 19, goal.y + 8, 3, 3); // Bottom-right petal
+
+            // Flower center (yellow)
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(goal.x + 16, goal.y + 5, 3, 3);
+
+            // Eyes with eyelashes (she has eyelashes unlike Meat Boy!)
             ctx.fillStyle = 'black';
-            ctx.fillRect(goal.x + 14, goal.y + 8, 4, 4);
-            ctx.fillRect(goal.x + 22, goal.y + 8, 4, 4);
+            ctx.fillRect(goal.x + 10, goal.y + 14, 4, 5); // Left eye
+            ctx.fillRect(goal.x + 26, goal.y + 14, 4, 5); // Right eye
 
-            // Bow/heart on top
-            ctx.fillStyle = '#FF1493'; // Deep pink
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('♥', goal.x + 12, goal.y + 8);
+            // Eyelashes
+            ctx.fillStyle = 'black';
+            // Left eyelashes
+            ctx.fillRect(goal.x + 8, goal.y + 13, 2, 1);
+            ctx.fillRect(goal.x + 8, goal.y + 15, 2, 1);
+            // Right eyelashes
+            ctx.fillRect(goal.x + 30, goal.y + 13, 2, 1);
+            ctx.fillRect(goal.x + 30, goal.y + 15, 2, 1);
+
+            // Small smile (cute and friendly)
+            ctx.fillStyle = 'black';
+            ctx.fillRect(goal.x + 12, goal.y + 26, 16, 2);
+            ctx.fillRect(goal.x + 12, goal.y + 24, 2, 2); // Left corner
+            ctx.fillRect(goal.x + 26, goal.y + 24, 2, 2); // Right corner
         }
 
         // Draw blood splatters (Super Meat Boy style!)
