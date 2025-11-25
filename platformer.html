@@ -20,6 +20,7 @@
             background: #87CEEB;
             display: block;
             margin: 20px 0;
+            cursor: pointer;
         }
         .controls {
             background: #34495e;
@@ -45,23 +46,34 @@
         button:hover {
             background: #2980b9;
         }
+        .level-info {
+            font-size: 20px;
+            color: #ecf0f1;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="controls">
         <strong>Controls:</strong> Arrow Keys or WASD to move | Space or W/↑ to jump
     </div>
+    <div class="level-info" id="levelInfo">World Map</div>
     <div class="score">Score: <span id="score">0</span></div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <button onclick="resetGame()">Reset Game</button>
+    <div>
+        <button onclick="returnToMap()" id="mapBtn">World Map</button>
+        <button onclick="resetLevel()" id="resetBtn" style="display:none;">Reset Level</button>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
         // Game state
+        let gameState = 'worldmap'; // 'worldmap' or 'playing'
+        let currentLevel = null;
         let score = 0;
-        let gameOver = false;
+        let completedLevels = [];
 
         // Player
         const player = {
@@ -78,49 +90,155 @@
             color: '#e74c3c'
         };
 
-        // Platforms
-        const platforms = [
-            { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' }, // Ground
-            { x: 150, y: 450, width: 120, height: 20, color: '#2ecc71' },
-            { x: 350, y: 380, width: 100, height: 20, color: '#2ecc71' },
-            { x: 520, y: 310, width: 120, height: 20, color: '#2ecc71' },
-            { x: 300, y: 240, width: 100, height: 20, color: '#2ecc71' },
-            { x: 50, y: 180, width: 120, height: 20, color: '#2ecc71' },
-            { x: 650, y: 450, width: 100, height: 20, color: '#2ecc71' },
-            { x: 600, y: 200, width: 150, height: 20, color: '#2ecc71' }
-        ];
-
-        // Collectibles (coins)
-        const coins = [
-            { x: 200, y: 410, width: 20, height: 20, collected: false },
-            { x: 390, y: 340, width: 20, height: 20, collected: false },
-            { x: 570, y: 270, width: 20, height: 20, collected: false },
-            { x: 340, y: 200, width: 20, height: 20, collected: false },
-            { x: 100, y: 140, width: 20, height: 20, collected: false },
-            { x: 680, y: 160, width: 20, height: 20, collected: false },
-            { x: 700, y: 410, width: 20, height: 20, collected: false }
-        ];
-
-        // Goal
-        const goal = {
-            x: 700,
-            y: 140,
-            width: 40,
-            height: 40,
-            color: '#f39c12'
+        // Level definitions
+        const levels = {
+            1: {
+                name: "Grassland Plains",
+                bgColor: '#87CEEB',
+                spawnX: 50,
+                spawnY: 400,
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50, color: '#27ae60' },
+                    { x: 150, y: 450, width: 120, height: 20, color: '#2ecc71' },
+                    { x: 350, y: 380, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 520, y: 310, width: 120, height: 20, color: '#2ecc71' },
+                    { x: 300, y: 240, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 50, y: 180, width: 120, height: 20, color: '#2ecc71' },
+                    { x: 650, y: 450, width: 100, height: 20, color: '#2ecc71' },
+                    { x: 600, y: 200, width: 150, height: 20, color: '#2ecc71' }
+                ],
+                coins: [
+                    { x: 200, y: 410, width: 20, height: 20, collected: false },
+                    { x: 390, y: 340, width: 20, height: 20, collected: false },
+                    { x: 570, y: 270, width: 20, height: 20, collected: false },
+                    { x: 340, y: 200, width: 20, height: 20, collected: false },
+                    { x: 100, y: 140, width: 20, height: 20, collected: false },
+                    { x: 680, y: 160, width: 20, height: 20, collected: false },
+                    { x: 700, y: 410, width: 20, height: 20, collected: false }
+                ],
+                goal: { x: 700, y: 140, width: 40, height: 40, color: '#f39c12' }
+            },
+            2: {
+                name: "Cave Depths",
+                bgColor: '#2c2c3e',
+                spawnX: 50,
+                spawnY: 450,
+                platforms: [
+                    { x: 0, y: 550, width: 200, height: 50, color: '#5d4e37' },
+                    { x: 600, y: 550, width: 200, height: 50, color: '#5d4e37' },
+                    { x: 250, y: 480, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 450, y: 480, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 150, y: 400, width: 80, height: 20, color: '#6b5d4f' },
+                    { x: 350, y: 350, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 550, y: 400, width: 80, height: 20, color: '#6b5d4f' },
+                    { x: 680, y: 320, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 200, y: 280, width: 120, height: 20, color: '#6b5d4f' },
+                    { x: 450, y: 220, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 100, y: 150, width: 100, height: 20, color: '#6b5d4f' },
+                    { x: 600, y: 180, width: 120, height: 20, color: '#6b5d4f' }
+                ],
+                coins: [
+                    { x: 280, y: 440, width: 20, height: 20, collected: false },
+                    { x: 480, y: 440, width: 20, height: 20, collected: false },
+                    { x: 170, y: 360, width: 20, height: 20, collected: false },
+                    { x: 380, y: 310, width: 20, height: 20, collected: false },
+                    { x: 570, y: 360, width: 20, height: 20, collected: false },
+                    { x: 710, y: 280, width: 20, height: 20, collected: false },
+                    { x: 230, y: 240, width: 20, height: 20, collected: false },
+                    { x: 480, y: 180, width: 20, height: 20, collected: false },
+                    { x: 130, y: 110, width: 20, height: 20, collected: false },
+                    { x: 630, y: 140, width: 20, height: 20, collected: false }
+                ],
+                goal: { x: 50, y: 90, width: 40, height: 40, color: '#9b59b6' }
+            }
         };
+
+        // Current level data (loaded from levels object)
+        let platforms = [];
+        let coins = [];
+        let goal = {};
 
         // Input handling
         const keys = {};
 
         window.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === ' ') e.preventDefault(); // Prevent space from scrolling
+            if (e.key === ' ') e.preventDefault();
         });
 
         window.addEventListener('keyup', (e) => {
             keys[e.key] = false;
         });
+
+        // Canvas click handling for world map
+        canvas.addEventListener('click', (e) => {
+            if (gameState === 'worldmap') {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                checkLevelClick(clickX, clickY);
+            }
+        });
+
+        // Level management
+        function loadLevel(levelNum) {
+            const level = levels[levelNum];
+            if (!level) return;
+
+            currentLevel = levelNum;
+            gameState = 'playing';
+
+            // Load level data
+            platforms = JSON.parse(JSON.stringify(level.platforms));
+            coins = JSON.parse(JSON.stringify(level.coins));
+            goal = JSON.parse(JSON.stringify(level.goal));
+
+            // Reset player position
+            player.x = level.spawnX;
+            player.y = level.spawnY;
+            player.velocityX = 0;
+            player.velocityY = 0;
+
+            // Update UI
+            document.getElementById('levelInfo').textContent = level.name;
+            document.getElementById('resetBtn').style.display = 'inline-block';
+            canvas.style.background = level.bgColor;
+        }
+
+        function returnToMap() {
+            gameState = 'worldmap';
+            currentLevel = null;
+            document.getElementById('levelInfo').textContent = 'World Map';
+            document.getElementById('resetBtn').style.display = 'none';
+            canvas.style.background = '#34495e';
+        }
+
+        function resetLevel() {
+            if (currentLevel) {
+                const level = levels[currentLevel];
+                coins = JSON.parse(JSON.stringify(level.coins));
+                player.x = level.spawnX;
+                player.y = level.spawnY;
+                player.velocityX = 0;
+                player.velocityY = 0;
+            }
+        }
+
+        function checkLevelClick(x, y) {
+            const levelPositions = {
+                1: { x: 200, y: 300, width: 120, height: 120 },
+                2: { x: 480, y: 300, width: 120, height: 120 }
+            };
+
+            for (let levelNum in levelPositions) {
+                const pos = levelPositions[levelNum];
+                if (x >= pos.x && x <= pos.x + pos.width &&
+                    y >= pos.y && y <= pos.y + pos.height) {
+                    loadLevel(parseInt(levelNum));
+                    break;
+                }
+            }
+        }
 
         // Collision detection
         function checkCollision(rect1, rect2) {
@@ -208,8 +326,14 @@
             if (checkCollision(player, goal)) {
                 score += 100;
                 document.getElementById('score').textContent = score;
-                alert('You Win! 🎉 Final Score: ' + score);
-                resetGame();
+
+                // Mark level as completed
+                if (!completedLevels.includes(currentLevel)) {
+                    completedLevels.push(currentLevel);
+                }
+
+                alert(`Level Complete! 🎉\nScore this level: ${score}\nReturning to World Map...`);
+                returnToMap();
             }
         }
 
@@ -301,54 +425,121 @@
             ctx.fillStyle = goal.color;
             ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
 
-            // Star shape
-            ctx.fillStyle = '#f39c12';
+            // Goal icon (star or crystal depending on level)
             ctx.font = 'bold 30px Arial';
-            ctx.fillText('⭐', goal.x + 5, goal.y + 32);
+            if (currentLevel === 2) {
+                ctx.fillText('💎', goal.x + 5, goal.y + 32);
+            } else {
+                ctx.fillText('⭐', goal.x + 5, goal.y + 32);
+            }
         }
 
-        function draw() {
+        function drawWorldMap() {
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw everything
-            drawPlatforms();
-            drawCoins();
-            drawGoal();
-            drawPlayer();
+            // Title
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🗺️ World Map', canvas.width / 2, 80);
 
             // Instructions
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(10, 10, 280, 30);
+            ctx.font = '18px Arial';
+            ctx.fillText('Click a level to start!', canvas.width / 2, 140);
+
+            // Level 1
+            const level1X = 200, level1Y = 300;
+            ctx.fillStyle = completedLevels.includes(1) ? '#27ae60' : '#3498db';
+            ctx.fillRect(level1X, level1Y, 120, 120);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(level1X, level1Y, 120, 120);
+
             ctx.fillStyle = 'white';
-            ctx.font = '14px Arial';
-            ctx.fillText('Collect coins and reach the star!', 20, 30);
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('Level 1', level1X + 60, level1Y + 50);
+            ctx.font = '16px Arial';
+            ctx.fillText('Grassland', level1X + 60, level1Y + 75);
+            ctx.fillText('Plains', level1X + 60, level1Y + 95);
+
+            if (completedLevels.includes(1)) {
+                ctx.font = '30px Arial';
+                ctx.fillText('✓', level1X + 60, level1Y + 118);
+            }
+
+            // Level 2
+            const level2X = 480, level2Y = 300;
+            ctx.fillStyle = completedLevels.includes(2) ? '#27ae60' : '#9b59b6';
+            ctx.fillRect(level2X, level2Y, 120, 120);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(level2X, level2Y, 120, 120);
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('Level 2', level2X + 60, level2Y + 50);
+            ctx.font = '16px Arial';
+            ctx.fillText('Cave', level2X + 60, level2Y + 75);
+            ctx.fillText('Depths', level2X + 60, level2Y + 95);
+
+            if (completedLevels.includes(2)) {
+                ctx.font = '30px Arial';
+                ctx.fillText('✓', level2X + 60, level2Y + 118);
+            }
+
+            // Stats
+            ctx.font = '20px Arial';
+            ctx.fillText(`Total Score: ${score} | Completed: ${completedLevels.length}/2`, canvas.width / 2, 500);
+
+            ctx.textAlign = 'left';
+        }
+
+        function draw() {
+            if (gameState === 'worldmap') {
+                drawWorldMap();
+            } else {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw everything
+                drawPlatforms();
+                drawCoins();
+                drawGoal();
+                drawPlayer();
+
+                // Instructions
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(10, 10, 280, 30);
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Collect coins and reach the goal!', 20, 30);
+            }
         }
 
         function resetPlayerPosition() {
-            player.x = 50;
-            player.y = 400;
-            player.velocityX = 0;
-            player.velocityY = 0;
-        }
-
-        function resetGame() {
-            resetPlayerPosition();
-            score = 0;
-            document.getElementById('score').textContent = score;
-            coins.forEach(coin => coin.collected = false);
+            if (currentLevel && levels[currentLevel]) {
+                player.x = levels[currentLevel].spawnX;
+                player.y = levels[currentLevel].spawnY;
+                player.velocityX = 0;
+                player.velocityY = 0;
+            }
         }
 
         // Game loop
         function gameLoop() {
-            updatePlayer();
-            updateCoins();
-            checkGoal();
+            if (gameState === 'playing') {
+                updatePlayer();
+                updateCoins();
+                checkGoal();
+            }
             draw();
             requestAnimationFrame(gameLoop);
         }
 
-        // Start game
+        // Start game on world map
+        returnToMap();
         gameLoop();
     </script>
 </body>
