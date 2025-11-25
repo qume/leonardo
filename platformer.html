@@ -215,16 +215,57 @@
 
         // Draw functions
         function drawPlayer() {
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Main body - rounded square
+            ctx.fillStyle = '#d62828';
+            ctx.beginPath();
+            ctx.roundRect(player.x, player.y, player.width, player.height, 5);
+            ctx.fill();
 
-            // Eyes
+            // Dark shading on bottom and right
+            ctx.fillStyle = 'rgba(139, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.roundRect(player.x + 2, player.y + 15, player.width - 4, player.height - 15, 3);
+            ctx.fill();
+
+            // Highlight on top left
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.6)';
+            ctx.beginPath();
+            ctx.ellipse(player.x + 10, player.y + 8, 6, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Large expressive eyes
             ctx.fillStyle = 'white';
-            ctx.fillRect(player.x + 8, player.y + 8, 6, 6);
-            ctx.fillRect(player.x + 16, player.y + 8, 6, 6);
+            ctx.beginPath();
+            ctx.ellipse(player.x + 10, player.y + 12, 5, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(player.x + 20, player.y + 12, 5, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupils
             ctx.fillStyle = 'black';
-            ctx.fillRect(player.x + 10, player.y + 10, 3, 3);
-            ctx.fillRect(player.x + 18, player.y + 10, 3, 3);
+            ctx.beginPath();
+            ctx.arc(player.x + 11, player.y + 13, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(player.x + 21, player.y + 13, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye shine
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(player.x + 12, player.y + 12, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(player.x + 22, player.y + 12, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Small mouth
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(player.x + 15, player.y + 20, 3, 0, Math.PI);
+            ctx.stroke();
         }
 
         function drawPlatforms() {
